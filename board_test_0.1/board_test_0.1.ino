@@ -461,57 +461,6 @@ void matrix_mng(void) {
   }
 }
 
-bool isHit(int chickenX, int chickenY, int joyX, int joyY) {
-  int dx = chickenX - joyX;
-  int dy = chickenY - joyY;
-  int distSq = dx * dx + dy * dy;
-  return distSq <= CHICKEN_HITBOX_RADIUS * CHICKEN_HITBOX_RADIUS;
-}
-
-void chicken_init(void) {
-
-  randomSeed(esp_random());
-  targetX = random(10, 310);
-  targetY = random(10, 230);
-  prevX = (int)chickenX;
-  prevY = (int)chickenY;
-  tft.fillCircle(prevX, prevY, 4, ST77XX_RED);
-  timer_set(&chicken_timer, CHICKEN_TIMER_PERIOD);   // 50 FPS
-
-}
-
-void chicken_mng(void) {
-
-  if (timer_expired(&chicken_timer)) {
-    timer_restart(&chicken_timer);
-
-    // Сравнение центров прицела и хитбокса курицы
-    if (abs(chickenX - targetX) < 2 && abs(chickenY - targetY) < 2) {
-      targetX = random(10, 310);
-      targetY = random(10, 230);
-    }
-
-    // Перемещение курицы
-    chickenX += (targetX - chickenX) * SPEED;
-    chickenY += (targetY - chickenY) * SPEED;
-
-    int newX = (int)chickenX;
-    int newY = (int)chickenY;
-
-    // Рисование курицы
-    if (newX != prevX || newY != prevY) {
-      tft.fillCircle(prevX, prevY, 4, ST77XX_BLACK);
-      tft.fillCircle(newX,  newY,  4, ST77XX_RED);
-      prevX = newX;
-      prevY = newY;
-    }
-
-    // Условие попадания по курице
-    if (isHit(chickenX, chickenY, joyX, joyY)) {
-      // Звук на buzzer
-    }
-  }
-}
 // ================= Функции игры =================
 void shoot(){
   if(ammo > 0) ammo--;
