@@ -10,6 +10,8 @@
 
 #include "timer.h"
 
+#include <Beeper.h>
+
 // ================= Конфигурация платы =================
 // Мультиплексор RS2252XS16
 #define MUX_A 6
@@ -138,6 +140,14 @@ void func_mng(void);
 void chicken_mng(void);
 
 
+// ================= Константы игры =================
+#define MAX_AMMO 8
+
+
+// ================= Переменные игры =================
+unsigned char ammo = MAX_AMMO;
+
+
 // ================= Функции =================
 
 void setup() {
@@ -250,6 +260,7 @@ void func_mng(void) {
 
   if (mudule_btns[BTN_LEFT_NUM].pressing()) {
     tft.fillCircle(50, 55, 10, COLOR_BTN_ACTIVE);
+    reload();
   } else {
     tft.fillCircle(50, 55, 10, COLOR_BTN_INACTIVE);
   }
@@ -262,6 +273,7 @@ void func_mng(void) {
 
   if (mudule_btns[BTN_DOWN_NUM].pressing()) {
     tft.fillCircle(75, 80, 10, COLOR_BTN_ACTIVE);
+    shoot();
   } else {
     tft.fillCircle(75, 80, 10, COLOR_BTN_INACTIVE);
   }
@@ -441,14 +453,10 @@ void matrix_mng(void) {
     // Стираем старую точку
     mtrx.clear();
 
-    int matrix_dotX = 3 - map(ax, -16384, 16384, -3, 3);
-    int matrix_dotY = 3 + map(ay, -16384, 16384, -3, 3);
-
-    // Рисуем новую точку
-    mtrx.dot(matrix_dotX, matrix_dotY);
-    mtrx.dot(matrix_dotX + 1, matrix_dotY);
-    mtrx.dot(matrix_dotX, matrix_dotY + 1);
-    mtrx.dot(matrix_dotX + 1, matrix_dotY + 1);
+    // Рисуем линии матрицы для отображения патронов
+    for(int i = 8 - ammo; i < 8; i++){
+      mtrx.line(0, i, 7, i);
+    }
     mtrx.update();
   }
 }
@@ -503,4 +511,12 @@ void chicken_mng(void) {
       // Звук на buzzer
     }
   }
+}
+// ================= Функции игры =================
+void shoot(){
+  if(ammo > 0) ammo--;
+}
+
+void reload(){
+  ammo = MAX_AMMO;
 }
