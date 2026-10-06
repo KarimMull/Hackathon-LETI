@@ -72,6 +72,10 @@
 #define SPI_CLK 38
 #define MODULE_MATRIX_TIMER_PERIOD 50
 
+// Курица
+#define CHICKEN_TIMER_PERIOD 20
+#define CHICKEN_HITBOX_RADIUS 12
+
 // ================= Переменные =================
 
 
@@ -104,6 +108,13 @@ struct timer joy_timer;
 MAX7219<1, 1, MATRIX_CS, SPI_DATA, SPI_CLK > mtrx;  // подключение к любым пинам (софт SPI)
 struct timer matrix_timer;
 
+// Курица
+float chickenX = 160, chickenY = 120;       // текущая позиция
+float targetX = 160, targetY = 120; // куда ехать
+int prevX, prevY;
+const float SPEED = 0.05;           // доля пути за кадр
+struct timer chicken_timer
+
 
 // ================= Прототипы функций =================
 void selectModule(uint8_t mod);
@@ -116,6 +127,7 @@ void joy_init(void);
 
 void matrix_init(void);
 void func_init(void);
+void chicken_init(void);
 
 void btn_mng(void);
 void buzzer_mng(void);
@@ -123,6 +135,7 @@ void joy_mng(void);
 
 void matrix_mng(void);
 void func_mng(void);
+void chicken_mng(void);
 
 
 // ================= Функции =================
@@ -134,6 +147,7 @@ void setup() {
   buzzer_init();
   joy_init();
   matrix_init();
+  chicken_init();
 
   delay(500);
 }
@@ -146,6 +160,7 @@ void loop() {
   buzzer_mng();
   joy_mng();
   matrix_mng();
+  chicken_mng();
 }
 
 // ================= НАСТРОЙКА МУЛЬТИПЛЕКСОРА =================
@@ -202,28 +217,9 @@ void func_init(void) {
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
   tft.init(240, 320);  // Init ST7789 320x240
-  tft.setRotation(1);  // Портретная ориентация (240x320)
+  tft.setRotation(1);  // Горизонтальная ориентация (240x320)
   drawStaticUI();
 
-  strip.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
-  strip.show();   // Turn OFF all pixels ASAP
-  strip.setBrightness(BRIGHTNESS);
-
-  for (int i = 0; i < NUM_LEDS; i++) {  // For each pixel...
-
-    // strip.Color() takes RGB values, from 0,0,0 up to 255,255,255
-    // Here we're using a moderately bright green color:
-    strip.setPixelColor(i, strip.Color(i * 32, 0, (7 - i) * 32));
-
-    strip.show();  // Send the updated pixel colors to the hardware.
-
-    delay(100);  // Pause before next pass through loop
-  }
-  delay(1000);
-
-  strip.fill(strip.Color(255, 0, 0), 0, NUM_LEDS);
-  strip.show();
-  strip.setBrightness(50);
 }
 
 void func_mng(void) {
@@ -454,5 +450,57 @@ void matrix_mng(void) {
     mtrx.dot(matrix_dotX, matrix_dotY + 1);
     mtrx.dot(matrix_dotX + 1, matrix_dotY + 1);
     mtrx.update();
+  }
+}
+
+bool isHit(int chickenX, int chickenY, int joyX, int joyY) {
+  int dx = chickenX - joyX;
+  int dy = chickenY - joyY;
+  int distSq = dx * dx + dy * dy;
+  return distSq <= CHICKEN_HITBOX_RADIUS * CHICKEN_HITBOX_RADIUS;
+}
+
+void chicken_init(void) {
+
+  randomSeed(esp_random());
+  targetX = random(10, 310);
+  targetY = random(10, 230);
+  prevX = (int)chickenX;
+  prevY = (int)chickenY;
+  tft.fillCircle(prevX, prevY, 4, ST77XX_RED);
+  timer_set(&chicken_timer, CHICKEN_TIMER_PERIOD);   // 50 FPS
+
+}
+
+void chicken_mng(void) {
+
+  if (timer_expired(&chicken_timer)) {
+    timer_restart(&chicken_timer);
+
+    // Сравнение центров прицела и хитбокса курицы
+    if (abs(chickenX - targetX) < 2 && abs(chickenY - targetY) < 2) {
+      targetX = random(10, 310);
+      targetY = random(10, 230);
+    }
+
+    // Перемещение курицы
+    chickenX += (targetX - chickenX) * SPEED;
+    chickenY += (targetY - chickenY) * SPEED;
+
+    int newX = (int)chickenX;
+    int newY = (int)chickenY;
+
+    // Рисование курицы
+    if (newX != prevX || newY != prevY) {
+      tft.fillCircle(prevX, prevY, 4, ST77XX_BLACK);
+      tft.fillCircle(newX,  newY,  4, ST77XX_RED);
+      prevX = newX;
+      prevY = newY;
+    }
+
+    // Условие попадания по курице
+    if (isHit(chickenX, chickenY, joyX, joyY)) {
+      // Звук на buzzer
+    }
   }
 }
